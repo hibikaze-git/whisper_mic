@@ -21,7 +21,7 @@ class EmotionAnalyzer:
             for category in reader:
                 self.emotion_category_dict[category[1]] = {"detail": category[0], "aggregate": category[2]}
 
-        self.nlp = spacy.load('ja_ginza')
+        self.nlp = spacy.load("ja_ginza")
         ginza.set_split_mode(self.nlp, "C")
 
     def _wakati_with_tag(self, text) -> str:
