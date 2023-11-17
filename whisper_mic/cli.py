@@ -5,7 +5,7 @@ import torch
 import speech_recognition as sr
 from typing import Optional
 
-from whisper_mic.whisper_mic import WhisperMic
+from whisper_mic import WhisperMic
 
 @click.command()
 @click.option("--model", default="base", help="Model to use", type=click.Choice(["tiny","base", "small","medium","large","large-v2"]))
@@ -24,7 +24,7 @@ def main(model: str, english: bool, verbose: bool, energy:  int, pause: float, d
     if list_devices:
         print("Possible devices: ",sr.Microphone.list_microphone_names())
         return
-    mic = WhisperMic(model=model, english=english, verbose=verbose, energy=energy, pause=pause, dynamic_energy=dynamic_energy, save_file=save_file, device=device,mic_index=mic_index)
+    mic = WhisperMic(model=model, english=english, verbose=verbose, energy=energy, pause=pause, dynamic_energy=dynamic_energy, save_file=save_file, device=device, mic_index=mic_index, model_root="./cache")
     if not loop:
         result = mic.listen()
         print("You said: " + result)

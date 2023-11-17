@@ -5,12 +5,18 @@ import speech_recognition as sr
 import threading
 import numpy as np
 import os
+import sys
 import time
 import tempfile
 import platform
 import pynput.keyboard
 
-from whisper_mic.utils import get_logger
+from utils import get_logger
+#from distil_whisper import DistilWhisper
+#from hubert import Hubert
+#from fast_whisper import FasterWhisper
+from emotion_analysis import EmotionAnalyzer
+from sentiment_analysis import SentimentAnalyzer
 
 
 class WhisperMic:
@@ -26,6 +32,13 @@ class WhisperMic:
 
         self.platform = platform.system()
 
+        #self.distil_whisper = DistilWhisper()
+        #self.hubert = Hubert()
+        #self.faster_whisper = FasterWhisper()
+
+        self.emotion_analyzer = EmotionAnalyzer()
+        self.sentiment_analyzer = SentimentAnalyzer()
+
         if self.platform == "darwin":
             if device == "mps":
                 self.logger.warning("Using MPS for Mac, this does not work but may in the future")
@@ -35,7 +48,11 @@ class WhisperMic:
         if (model != "large" and model != "large-v2") and self.english:
             model = model + ".en"
         
-        self.audio_model = whisper.load_model(model, download_root=model_root).to(device)
+        self.audio_model = whisper.load_model(model, download_root=model_root).half().to(device)
+        for m in self.audio_model.modules():
+            if isinstance(m, whisper.model.LayerNorm):
+                m.float()
+
         self.temp_dir = tempfile.mkdtemp() if save_file else None
 
         self.audio_queue = queue.Queue()
@@ -125,13 +142,31 @@ class WhisperMic:
             audio_data = self.__get_all_audio()
         else:
             audio_data = data
-        audio_data = self.__preprocess(audio_data)
-        if self.english:
-            result = self.audio_model.transcribe(audio_data,language='english')
-        else:
-            result = self.audio_model.transcribe(audio_data)
+
+        #print("-----hubert")
+        #self.hubert.transcribe(audio_data)
+
+        #print("-----faster whisper")
+        #self.faster_whisper.transcribe(audio_data)
+
+        use_distil = False
+
+        with torch.no_grad():
+            if use_distil:
+                #result = self.distil_whisper.transcribe(audio_data)
+                pass
+            else:
+                audio_data = self.__preprocess(audio_data)
+                if self.english:
+                    result = self.audio_model.transcribe(audio_data,language='english',fp16=True,beam_size=5)
+                else:
+                    result = self.audio_model.transcribe(audio_data,language='japanese',fp16=True,beam_size=5)
 
         predicted_text = result["text"]
+
+        print(self.emotion_analyzer.extract_emotion(predicted_text))
+        print(self.sentiment_analyzer.extract(predicted_text))
+
         if not self.verbose:
             if predicted_text not in self.banned_results:
                 self.result_queue.put_nowait(predicted_text)
@@ -146,14 +181,23 @@ class WhisperMic:
     def listen_loop(self, dictate: bool = False, phrase_time_limit=None) -> None:
         self.recorder.listen_in_background(self.source, self.__record_load, phrase_time_limit=phrase_time_limit)
         self.logger.info("Listening...")
-        threading.Thread(target=self.__transcribe_forever).start()
-        
-        while True:
-            result = self.result_queue.get()
-            if dictate:
-                self.keyboard.type(result)
-            else:
-                print(result)
+        transcribe_thread = threading.Thread(target=self.__transcribe_forever)
+        transcribe_thread.setDaemon(True)
+        transcribe_thread.start()
+
+        is_loop = True
+
+        try:
+            while is_loop:
+                result = self.result_queue.get()
+                if dictate:
+                    self.keyboard.type(result)
+                else:
+                    print(result)
+        except KeyboardInterrupt:
+            self.break_threads = True
+            is_loop = False
+            sys.exit()
 
             
     def listen(self, timeout = None, phrase_time_limit=None):

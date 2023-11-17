@@ -1,4 +1,4 @@
-numpy
+numpy==1.23.5
 tqdm
 more-itertools
 transformers>=4.19.0
@@ -7,7 +7,10 @@ click
 pyaudio
 SpeechRecognition
 pydub
-git+https://github.com/openai/whisper.git
---extra-index-url https://download.pytorch.org/whl/cu113
-torch
+#git+https://github.com/openai/whisper.git
+#--extra-index-url https://download.pytorch.org/whl/cu113
+#torch
 pynput
+openai-whisper
+rich
+librosa==0.8.1
