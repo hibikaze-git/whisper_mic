@@ -52,6 +52,8 @@ class WhisperMic:
         self.emotion_analyzer = EmotionAnalyzer()
         self.sentiment_analyzer = SentimentAnalyzer()
 
+        self.sent_filtered = ["ご視聴ありがとうございました", "ご視聴ありがとうございました。"]
+
         if self.platform == "darwin":
             if device == "mps":
                 self.logger.warning("Using MPS for Mac, this does not work but may in the future")
@@ -169,8 +171,9 @@ class WhisperMic:
 
         predicted_text = result["text"]
 
-        print(self.emotion_analyzer.extract_emotion(predicted_text))
-        print(self.sentiment_analyzer.extract(predicted_text))
+        if predicted_text not in self.sent_filtered:
+            print(self.emotion_analyzer.extract_emotion(predicted_text))
+            print(self.sentiment_analyzer.extract(predicted_text))
 
         if not self.verbose:
             if predicted_text not in self.banned_results:
