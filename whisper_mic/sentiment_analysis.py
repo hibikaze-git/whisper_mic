@@ -26,4 +26,4 @@ class SentimentAnalyzer:
 
     def extract(self, text):
         result = self.pipe(text)
-        print(result)
+        return result

@@ -18,6 +18,7 @@ from utils import get_logger
 # from fast_whisper import FasterWhisper
 from emotion_analysis import EmotionAnalyzer
 from sentiment_analysis import SentimentAnalyzer
+from vrchat_manager import VRChatManager
 
 
 class WhisperMic:
@@ -51,8 +52,13 @@ class WhisperMic:
 
         self.emotion_analyzer = EmotionAnalyzer()
         self.sentiment_analyzer = SentimentAnalyzer()
+        self.vrchat_manager = VRChatManager()
 
-        self.sent_filtered = ["ご視聴ありがとうございました", "ご視聴ありがとうございました。"]
+        self.sent_filtered = [
+            "ご視聴ありがとうございました",
+            "ご視聴ありがとうございました。",
+            "チャンネル登録をお願いします"
+        ]
 
         if self.platform == "darwin":
             if device == "mps":
@@ -172,8 +178,13 @@ class WhisperMic:
         predicted_text = result["text"]
 
         if predicted_text not in self.sent_filtered:
-            print(self.emotion_analyzer.extract_emotion(predicted_text))
-            print(self.sentiment_analyzer.extract(predicted_text))
+            emotions = self.emotion_analyzer.extract_emotion(predicted_text)
+            sentiments = self.sentiment_analyzer.extract(predicted_text)
+
+            print("emotion", emotions)
+            print("sentiment", sentiments)
+
+            self.vrchat_manager.change_expression(emotions, sentiments)
 
         if not self.verbose:
             if predicted_text not in self.banned_results:
