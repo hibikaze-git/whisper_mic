@@ -4,24 +4,22 @@ from pythonosc import udp_client
 
 
 EMOTION_DICT = {
+    "平常": [0, 1, 2, 3, 4],
     "喜び": [6, 7, 8],
-    "信頼": [],
-    "恐れ": [10],
-    "驚き": [],
-    "悲しみ": [11, 12],
-    "嫌悪": [13, 14],
-    "怒り": [15],
-    "期待": [],
-    "苦悩": [16],
-    "羞恥": [],
-    "平常": [0, 1, 2, 3, 4]
+    "信頼": [9],
+    "期待": [10],
+    "恐れ": [12],
+    "悲しみ": [13, 14],
+    "嫌悪": [15, 16],
+    "怒り": [17],
+    "苦悩": [18],
+    "羞恥": [19],
+    "驚き": [20],
 }
 
 SENTIMENT_DICT = {
-    #"POSITIVE": ["喜び", "信頼", "期待"],
-    "POSITIVE": ["喜び"],
-    "NEGATIVE": ["恐れ", "悲しみ", "嫌悪", "怒り", "苦悩"],
-    #"NEUTRAL": ["平常", "驚き", "羞恥"],
+    "POSITIVE": ["喜び", "信頼", "期待"],
+    "NEGATIVE": ["恐れ", "悲しみ", "嫌悪", "怒り", "苦悩", "驚き", "羞恥"],
     "NEUTRAL": ["平常"],
 }
 
@@ -32,25 +30,61 @@ class VRChatManager:
         port = 9000
         self.client = udp_client.SimpleUDPClient(ip, port)
 
-    def change_expression(self, emotions, sentiments):
-        expression_num = 0
-
-        if emotions:
-            emotion_list = EMOTION_DICT.get(emotions[0]["aggregate"])
-
-            if emotion_list is not None and emotion_list:
-                expression_num = random.choice(emotion_list)
-
-        elif sentiments:
+    def choice_expression_by_sentiment(self, sentiments, expression_num):
+        if sentiments:
             sentiment = sentiments[0]["label"]
 
             if sentiment in ["NEGATIVE", "POSITIVE"]:
-                threshold = 0.65
+                threshold = 0.7
             else:
                 threshold = 0
 
             if sentiments[0]["score"] > threshold:
-                sentiment_to_emotion = random.choice(SENTIMENT_DICT.get(sentiment))
-                expression_num = random.choice(EMOTION_DICT.get(sentiment_to_emotion))
+                emotion = random.choice(SENTIMENT_DICT.get(sentiment))
+                expression_num = random.choice(EMOTION_DICT.get(emotion))
 
+        return expression_num
+
+    def change_expression(self, emotions, sentiments):
+        expression_num = 0
+        emotion = None
+        change_expression_by_emotion = False
+
+        if emotions:
+            emotion = emotions[0]["aggregate"]
+            emotions_sentiment = None
+
+            # emotionのネガポジを判定
+            for key, val in SENTIMENT_DICT.items():
+                if emotion in val:
+                    emotions_sentiment = key
+
+            if sentiments:
+                sentiment = sentiments[0]["label"]
+
+                # 文章のネガポジとemotionのネガポジが一致した場合のみemotinoに基づいて表情変更
+                if emotions_sentiment == sentiment or sentiment == "NEUTRAL":
+                    emotion_list = EMOTION_DICT.get(emotion)
+
+                    if emotion_list is not None and emotion_list:
+                        expression_num = random.choice(emotion_list)
+                        change_expression_by_emotion = True
+
+                else:
+                    expression_num = self.choice_expression_by_sentiment(sentiments, expression_num)
+
+        else:
+            # sentimentのみで判定
+            expression_num = self.choice_expression_by_sentiment(sentiments, expression_num)
+
+        # まばたき制御
+        if emotion in ["驚き"]:
+            self.client.send_message("/avatar/parameters/FaceEmo_CN_BLINK_ENABLE", False)
+        else:
+            self.client.send_message("/avatar/parameters/FaceEmo_CN_BLINK_ENABLE", True)
+
+        # 送信
         self.client.send_message("/avatar/parameters/FaceEmo_SYNC_EM_EMOTE", expression_num)
+        print("send: ", expression_num)
+
+        return change_expression_by_emotion

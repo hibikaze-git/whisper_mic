@@ -10,7 +10,7 @@ class FasterWhisper:
 
         model_size = "large-v2"
 
-        self.model = WhisperModel(model_size, device="cuda", compute_type="float16", download_root="./cache")
+        self.model = WhisperModel(model_size, device="cuda:0", compute_type="float16", download_root="./cache")
 
     def __preprocess(self, data):
         return np.frombuffer(data, np.int16).flatten().astype(np.float32) / 32768.0
