@@ -1,7 +1,9 @@
 import csv
+import json
 
 import ginza
 import spacy
+import textdistance
 
 
 class EmotionAnalyzer:
@@ -23,6 +25,8 @@ class EmotionAnalyzer:
 
         self.nlp = spacy.load("ja_ginza")
         ginza.set_split_mode(self.nlp, "C")
+
+        self.filter_tags = ["助詞", "補助記号", "助動詞"]
 
     def _wakati_with_tag(self, text) -> str:
         """
@@ -63,26 +67,54 @@ class EmotionAnalyzer:
 
         # analyzerで解析
         result = self._wakati_with_tag(text)
+        print(json.dumps(result, indent=4, ensure_ascii=False))
 
         # テキスト自身も含める
         word_list = [text]
 
         for key, value in result.items():
             for item in value.values():
-                word_list.append(item["norm_"])
+                if item["tag_"].split("-")[0] not in self.filter_tags:
+                    word_list.append(item["norm_"])
 
         print(word_list)
 
         emotion_list = []
+        match_word = {"word": None, "emotion_word": None, "similarity": None}
+        rate_dict = {}
 
         for emotion_word, emotion_tags in self.emotion_annotation_dict.items():
             for word in word_list:
+                if len(word) > 3:
+                    rate = round(textdistance.cosine.normalized_similarity(word, emotion_word), 8)
+                    rate_dict["->".join([word, emotion_word, emotion_tags])] = rate
+
                 if word == emotion_word:
                     emotion_tag_list = list(emotion_tags)
+                    match_word["word"] = word
+                    match_word["emotion_word"] = emotion_word
+                    match_word["similarity"] = 1
 
                     for emotion_tag in emotion_tag_list:
                         emotion_list.append(self.emotion_category_dict.get(emotion_tag))
 
                     break
+
+        if not emotion_list and rate_dict.items():
+            max_key, rate = max(rate_dict.items(), key=lambda x: x[1])
+            print(max_key, rate)
+
+            [word, emotion_word, emotion_tags] = max_key.split("->")
+
+            if rate > 0.8:
+                emotion_tag_list = list(emotion_tags)
+                match_word["word"] = word
+                match_word["emotion_word"] = emotion_word
+                match_word["similarity"] = rate
+
+                for emotion_tag in emotion_tag_list:
+                    emotion_list.append(self.emotion_category_dict.get(emotion_tag))
+
+        print(match_word)
 
         return emotion_list

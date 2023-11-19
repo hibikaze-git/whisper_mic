@@ -233,7 +233,7 @@ class WhisperMic:
                     self.keyboard.type(result)
                 else:
                     print(result)
-        except KeyboardInterrupt:
+        except:
             self.break_threads = True
             is_loop = False
             sys.exit()
