@@ -4,18 +4,20 @@ from pythonosc import udp_client
 
 
 EMOTION_DICT = {
-    "平常": [0, 1, 2, 3, 4],
-    "喜び": [6, 7, 8],
-    "信頼": [9],
-    "期待": [10],
-    "恐れ": [12],
-    "悲しみ": [13, 14],
-    "嫌悪": [15, 16],
-    "怒り": [17],
-    "苦悩": [18],
-    "羞恥": [19],
-    "驚き": [20],
+    "平常": [1, 2, 3, 4, 5, 6, 7, 8, 9],
+    "喜び": [11, 12, 13, 14, 15, 16],
+    "信頼": [17],
+    "期待": [18],
+    "恐れ": [20],
+    "悲しみ": [21, 22],
+    "嫌悪": [23, 24],
+    "怒り": [25],
+    "苦悩": [26],
+    "羞恥": [27],
+    "驚き": [28],
 }
+
+NO_BLINK_NUMS = [16]
 
 SENTIMENT_DICT = {
     "POSITIVE": ["喜び", "信頼", "期待"],
@@ -81,7 +83,7 @@ class VRChatManager:
             expression_num, is_NEUTRAL = self.choice_expression_by_sentiment(sentiments, expression_num)
 
         # まばたき制御
-        if emotion in ["驚き"]:
+        if emotion in ["驚き"] or expression_num in NO_BLINK_NUMS:
             self.client.send_message("/avatar/parameters/FaceEmo_CN_BLINK_ENABLE", False)
         else:
             self.client.send_message("/avatar/parameters/FaceEmo_CN_BLINK_ENABLE", True)
