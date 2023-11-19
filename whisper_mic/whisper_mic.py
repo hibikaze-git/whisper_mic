@@ -57,13 +57,13 @@ class WhisperMic:
 
         self.sent_filtered = [
             "ご視聴ありがとうございました",
-            "ご視聴ありがとうございました。",
-            "チャンネル登録をお願いします"
+            "チャンネル登録をお願いします",
+            "次回もお会いしましょう",
+            "ご覧いただきありがとうございます"
         ]
 
         self.vrchat = vrchat
         self.exec_emotion_analysis = True
-        self.disable_emotion_analysis = False
 
         if self.platform == "darwin":
             if device == "mps":
@@ -182,8 +182,15 @@ class WhisperMic:
 
         predicted_text = result["text"]
 
-        if self.exec_emotion_analysis:
-            if predicted_text not in self.sent_filtered:
+        if self.exec_emotion_analysis and predicted_text != "":
+            no_filtered_sent = True
+
+            # 無音状態での文字起こしへの対応
+            for sent in self.sent_filtered:
+                if sent in predicted_text:
+                    no_filtered_sent = False
+
+            if no_filtered_sent:
                 emotions = self.emotion_analyzer.extract_emotion(predicted_text)
                 sentiments = self.sentiment_analyzer.extract(predicted_text)
 
@@ -191,10 +198,12 @@ class WhisperMic:
                 print("sentiment", sentiments)
 
                 if self.vrchat:
-                    self.disable_emotion_analysis = self.vrchat_manager.change_expression(emotions, sentiments)
-                    switch_emotion_analysis_thread = threading.Thread(target=self.__switch_emotion_analysis_once)
-                    switch_emotion_analysis_thread.setDaemon(True)
-                    switch_emotion_analysis_thread.start()
+                    disable_emotion_analysis = self.vrchat_manager.change_expression(emotions, sentiments)
+
+                    if disable_emotion_analysis:
+                        switch_emotion_analysis_thread = threading.Thread(target=self.__switch_emotion_analysis_once, args=(5,))
+                        switch_emotion_analysis_thread.setDaemon(True)
+                        switch_emotion_analysis_thread.start()
 
         if not self.verbose:
             if predicted_text not in self.banned_results:
@@ -206,12 +215,10 @@ class WhisperMic:
         if self.save_file:
             os.remove(audio_data)
 
-    def __switch_emotion_analysis_once(self):
-        if self.disable_emotion_analysis:
-            self.exec_emotion_analysis = False
-            time.sleep(5)
-            self.exec_emotion_analysis = True
-            self.disable_emotion_analysis = False
+    def __switch_emotion_analysis_once(self, sleep_time):
+        self.exec_emotion_analysis = False
+        time.sleep(sleep_time)
+        self.exec_emotion_analysis = True
 
     def listen_loop(self, dictate: bool = False, phrase_time_limit=None) -> None:
         self.recorder.listen_in_background(self.source, self.__record_load, phrase_time_limit=phrase_time_limit)

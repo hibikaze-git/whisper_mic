@@ -33,22 +33,25 @@ class VRChatManager:
     def choice_expression_by_sentiment(self, sentiments, expression_num):
         if sentiments:
             sentiment = sentiments[0]["label"]
+            is_NEUTRAL = False
 
             if sentiment in ["NEGATIVE", "POSITIVE"]:
                 threshold = 0.7
             else:
                 threshold = 0
+                is_NEUTRAL = True
 
             if sentiments[0]["score"] > threshold:
                 emotion = random.choice(SENTIMENT_DICT.get(sentiment))
                 expression_num = random.choice(EMOTION_DICT.get(emotion))
 
-        return expression_num
+        return expression_num, is_NEUTRAL
 
     def change_expression(self, emotions, sentiments):
         expression_num = 0
         emotion = None
         change_expression_by_emotion = False
+        is_NEUTRAL = False
 
         if emotions:
             emotion = emotions[0]["aggregate"]
@@ -71,11 +74,11 @@ class VRChatManager:
                         change_expression_by_emotion = True
 
                 else:
-                    expression_num = self.choice_expression_by_sentiment(sentiments, expression_num)
+                    expression_num, is_NEUTRAL = self.choice_expression_by_sentiment(sentiments, expression_num)
 
         else:
             # sentimentのみで判定
-            expression_num = self.choice_expression_by_sentiment(sentiments, expression_num)
+            expression_num, is_NEUTRAL = self.choice_expression_by_sentiment(sentiments, expression_num)
 
         # まばたき制御
         if emotion in ["驚き"]:
@@ -87,4 +90,12 @@ class VRChatManager:
         self.client.send_message("/avatar/parameters/FaceEmo_SYNC_EM_EMOTE", expression_num)
         print("send: ", expression_num)
 
-        return change_expression_by_emotion
+        # 判定された感情に応じて感情解析を停止するか分岐
+        if change_expression_by_emotion:
+            disable_emotion_analysis = True
+        elif is_NEUTRAL:
+            disable_emotion_analysis = False
+        else:
+            disable_emotion_analysis = True
+
+        return disable_emotion_analysis
