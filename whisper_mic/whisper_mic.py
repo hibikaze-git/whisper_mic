@@ -3,6 +3,7 @@ import whisper
 import queue
 import speech_recognition as sr
 import threading
+import nue_asr
 import numpy as np
 import os
 import sys
@@ -74,10 +75,16 @@ class WhisperMic:
         if (model != "large" and model != "large-v2") and self.english:
             model = model + ".en"
 
-        self.audio_model = whisper.load_model(model, download_root=model_root).half().to(device)
-        for m in self.audio_model.modules():
-            if isinstance(m, whisper.model.LayerNorm):
-                m.float()
+        self.use_nue_asr = True
+
+        if self.use_nue_asr:
+            self.audio_model = nue_asr.load_model("rinna/nue-asr")
+            self.tokenizer = nue_asr.load_tokenizer("rinna/nue-asr")
+        else:
+            self.audio_model = whisper.load_model(model, download_root=model_root).half().to(device)
+            for m in self.audio_model.modules():
+                if isinstance(m, whisper.model.LayerNorm):
+                    m.float()
 
         self.temp_dir = tempfile.mkdtemp() if save_file else None
 
@@ -173,6 +180,10 @@ class WhisperMic:
             if use_distil:
                 # result = self.distil_whisper.transcribe(audio_data)
                 pass
+            elif self.use_nue_asr:
+                audio_data = self.__preprocess(audio_data)
+                result = nue_asr.transcribe(self.audio_model, self.tokenizer, audio_data)
+                predicted_text = result.text
             else:
                 audio_data = self.__preprocess(audio_data)
                 if self.english:
@@ -180,7 +191,7 @@ class WhisperMic:
                 else:
                     result = self.audio_model.transcribe(audio_data, language="japanese", fp16=True, beam_size=5)
 
-        predicted_text = result["text"]
+                predicted_text = result["text"]
 
         if self.exec_emotion_analysis and predicted_text != "":
             no_filtered_sent = True

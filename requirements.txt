@@ -1,3 +1,4 @@
+#torch cuda
 numpy==1.23.5
 tqdm
 more-itertools
@@ -8,9 +9,12 @@ pyaudio
 SpeechRecognition
 pydub
 #git+https://github.com/openai/whisper.git
-#--extra-index-url https://download.pytorch.org/whl/cu113
-#torch
 pynput
 openai-whisper
 rich
 librosa==0.8.1
+#pip install -U ginza ja_ginza
+textdistance
+python-osc
+fugashi[unidic-lite]
+ipadic

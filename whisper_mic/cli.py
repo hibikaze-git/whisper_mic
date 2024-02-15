@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import os
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 import click
 import torch
@@ -24,7 +24,7 @@ print(torch.cuda.get_device_name(0))
     "--device",
     default=("cuda:0" if torch.cuda.is_available() else "cpu"),
     help="Device to use",
-    type=click.Choice(["cpu", "cuda", "mps", "cuda:0", "cuda:1"]),
+    type=click.Choice(["cpu", "cuda", "mps", "cuda:0", "cuda:0"]),
 )
 @click.option("--english", default=False, help="Whether to use English model", is_flag=True, type=bool)
 @click.option("--verbose", default=False, help="Whether to print verbose output", is_flag=True, type=bool)
