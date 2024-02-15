@@ -25,5 +25,10 @@ class SentimentAnalyzer:
         )
 
     def extract(self, text):
-        result = self.pipe(text)
+        try:
+            result = self.pipe(text)
+        except Exception as e:
+            print(e)
+            # dummyの結果
+            result = [{'label': 'NEUTRAL', 'score': 0.9087327122688293}]
         return result
